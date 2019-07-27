@@ -1,10 +1,10 @@
-# Google Kubernetes Engine Hardening Demo
+# Google Kubernetes Engine Secure Defaults Demo
 
 ## Table of Contents
 
 <!--ts-->
 
-* [Google Kubernetes Engine Hardening Demo](#google-kubernetes-engine-hardening-demo)
+* [Google Kubernetes Engine Secure Defaults Demo](#google-kubernetes-engine-secure-defaults-demo)
 * [Introduction](#introduction)
 * [Objectives](#objectives)
 * [Prerequisites](#prerequisites)
@@ -62,7 +62,7 @@ _NOTE: This section can be skipped if the cloud deployment is being performed wi
 
 Click the button below to open the demo in your Cloud Shell:
 
-[![Open in Cloud Shell](http://gstatic.com/cloudssh/images/open-btn.svg)](https://console.cloud.google.com/cloudshell/open?git_repo=https%3A%2F%2Fgithub.com%2FGoogleCloudPlatform%2Fgke-hardening-demo&page=editor&tutorial=README.md)
+[![Open in Cloud Shell](http://gstatic.com/cloudssh/images/open-btn.svg)](https://console.cloud.google.com/cloudshell/open?git_repo=https%3A%2F%2Fgithub.com%2FGoogleCloudPlatform%2Fgke-secure-defaults-demo&page=editor&tutorial=README.md)
 
 To prepare [gcloud](https://cloud.google.com/sdk/gcloud/) for use in Cloud Shell, execute the following command in the terminal at the bottom of the browser window you just opened:
 
@@ -85,13 +85,13 @@ For deployments without using Cloud Shell, you will need to have access to a com
 Use `git` to clone this project to your local machine:
 
 ```console
-git clone https://github.com/GoogleCloudPlatform/gke-hardening-demo
+git clone https://github.com/GoogleCloudPlatform/gke-secure-defaults-demo
 ```
 
 When downloading is complete, change your current working directory to the new project:
 
 ```console
-cd gke-hardening-demo
+cd gke-secure-defaults-demo
 ```
 
 Continue with the instructions below, running all commands from this directory.
