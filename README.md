@@ -138,7 +138,7 @@ Your `kubectl` version (Client) should be within two minor releases of the GKE c
 From your Cloud Shell prompt, launch a single instance of the Google Cloud-SDK container that will be automatically removed after exiting from the shell:
 
 ```console
-kubectl run -it --rm gcloud --image=google/cloud-sdk:latest --restart=Never -- bash
+kubectl run -it --generator=run-pod/v1 --rm gcloud --image=google/cloud-sdk:latest --restart=Never -- bash
 ```
 
 This will take a few moments to complete.
@@ -186,7 +186,7 @@ Without requiring a custom HTTP header when accessing the GCE Instance Metadata 
 Keep this shell inside the pod available for the next step.  If you accidentally exit from the pod, simply re-run:
 
 ```console
-kubectl run -it --rm gcloud --image=google/cloud-sdk:latest --restart=Never -- bash
+kubectl run -it --generator=run-pod/v1 --rm gcloud --image=google/cloud-sdk:latest --restart=Never -- bash
 ```
 
 ### Explore the GKE node bootstrapping credentials
@@ -332,7 +332,7 @@ second-pool  n1-standard-1  100           1.12.8-gke.6
 In Cloud Shell, launch a single instance of the Google Cloud-SDK container that will be run only on the second node pool with the protections enabled and not run as the root user.
 
 ```console
-kubectl run -it --rm gcloud --image=google/cloud-sdk:latest --restart=Never --overrides='{ "apiVersion": "v1", "spec": { "securityContext": { "runAsUser": 65534, "fsGroup": 65534 }, "nodeSelector": { "cloud.google.com/gke-nodepool": "second-pool" } } }' -- bash
+kubectl run -it --generator=run-pod/v1 --rm gcloud --image=google/cloud-sdk:latest --restart=Never --overrides='{ "apiVersion": "v1", "spec": { "securityContext": { "runAsUser": 65534, "fsGroup": 65534 }, "nodeSelector": { "cloud.google.com/gke-nodepool": "second-pool" } } }' -- bash
 ```
 
 You should now have a bash shell inside the pod's container running on the node pool named `second-pool`. You should see the following:
