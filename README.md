@@ -1,10 +1,9 @@
-# Google Kubernetes Engine Hardening Demo
+# Google Kubernetes Engine Secure Defaults Demo
 
 ## Table of Contents
 
-<!--ts-->
-
-* [Google Kubernetes Engine Hardening Demo](#google-kubernetes-engine-hardening-demo)
+<!-- toc -->
+* [Google Kubernetes Engine Secure Defaults Demo](#google-kubernetes-engine-secure-defaults-demo)
 * [Introduction](#introduction)
 * [Objectives](#objectives)
 * [Prerequisites](#prerequisites)
@@ -17,8 +16,7 @@
 * [Tear Down](#tear-down)
 * [Troubleshooting](#troubleshooting)
 * [Relevant Materials](#relevant-materials)
-
-<!--te-->
+<!-- toc -->
 
 ## Introduction
 
@@ -62,7 +60,7 @@ _NOTE: This section can be skipped if the cloud deployment is being performed wi
 
 Click the button below to open the demo in your Cloud Shell:
 
-[![Open in Cloud Shell](http://gstatic.com/cloudssh/images/open-btn.svg)](https://console.cloud.google.com/cloudshell/open?git_repo=https%3A%2F%2Fgithub.com%2FGoogleCloudPlatform%2Fgke-hardening-demo&page=editor&tutorial=README.md)
+[![Open in Cloud Shell](http://gstatic.com/cloudssh/images/open-btn.svg)](https://console.cloud.google.com/cloudshell/open?git_repo=https%3A%2F%2Fgithub.com%2FGoogleCloudPlatform%2Fgke-secure-defaults-demo&page=editor&tutorial=README.md)
 
 To prepare [gcloud](https://cloud.google.com/sdk/gcloud/) for use in Cloud Shell, execute the following command in the terminal at the bottom of the browser window you just opened:
 
@@ -85,13 +83,13 @@ For deployments without using Cloud Shell, you will need to have access to a com
 Use `git` to clone this project to your local machine:
 
 ```console
-git clone https://github.com/GoogleCloudPlatform/gke-hardening-demo
+git clone https://github.com/GoogleCloudPlatform/gke-secure-defaults-demo
 ```
 
 When downloading is complete, change your current working directory to the new project:
 
 ```console
-cd gke-hardening-demo
+cd gke-secure-defaults-demo
 ```
 
 Continue with the instructions below, running all commands from this directory.
@@ -126,23 +124,28 @@ The script will:
 
 After the cluster is created successfully, check your installed version of Kubernetes using the `kubectl version` command:
 
-```
+```console
 kubectl version
+
+Client Version: version.Info{Major:"1", Minor:"14", GitVersion:"v1.14.3", GitCommit:"5e53fd6bc17c0dec8434817e69b04a25d8ae0ff0", GitTreeState:"clean", BuildDate:"2019-06-06T01:44:30Z", GoVersion:"go1.12.5", Compiler:"gc", Platform:"darwin/amd64"}
+Server Version: version.Info{Major:"1", Minor:"12+", GitVersion:"v1.12.8-gke.10", GitCommit:"f53039cc1e5295eed20969a4f10fb6ad99461e37", GitTreeState:"clean", BuildDate:"2019-06-19T20:48:40Z", GoVersion:"go1.10.8b4", Compiler:"gc", Platform:"linux/amd64"}
 ```
+
+Your `kubectl` version (Client) should be within two minor releases of the GKE cluster created (Server).
 
 ### Run a Google Cloud-SDK pod
 
-1. From your Cloud Shell prompt, launch a single instance of the Google Cloud-SDK container:
+From your Cloud Shell prompt, launch a single instance of the Google Cloud-SDK container that will be automatically removed after exiting from the shell:
 
-```
-kubectl run -it --rm gcloud --image=google/cloud-sdk:latest --restart=Never -- bash
+```console
+kubectl run -it --generator=run-pod/v1 --rm gcloud --image=google/cloud-sdk:latest --restart=Never -- bash
 ```
 
 This will take a few moments to complete.
 
-2. You should now have a bash shell inside the pod's container:
+You should now have a bash shell inside the pod's container:
 
-```
+```console
 root@gcloud:/#
 ```
 
@@ -154,25 +157,17 @@ In GKE Clusters created with version 1.11 or below, the "Legacy" or `v1beta1` Co
 
 Run the following command to access the "Legacy" Compute Metadata endpoint without requiring a custom HTTP header to get the GCE Instance name where this pod is running:
 
-```
-curl -s http://metadata.google.internal/computeMetadata/v1beta1/instance/name
-```
+```console
+curl -s http://metadata.google.internal/computeMetadata/v1beta1/instance/name && echo
 
-Output looks like:
-
-```
 gke-default-cluster-default-pool-b57a043a-6z5v
 ```
 
-Now, re-run the same command, but instead use the `v1` Compute Metadata endpoint:
+The `&& echo` command is to aid with terminal formatting and output readability.  Now, re-run the same command, but instead use the `v1` Compute Metadata endpoint:
 
-```
-curl -s http://metadata.google.internal/computeMetadata/v1/instance/name
-```
+```console
+curl -s http://metadata.google.internal/computeMetadata/v1/instance/name && echo
 
-Output looks like:
-
-```
 ...snip...
 Your client does not have permission to get URL <code>/computeMetadata/v1/instance/name</code> from this server. Missing Metadata-Flavor:Google header.
 ...snip...
@@ -180,13 +175,9 @@ Your client does not have permission to get URL <code>/computeMetadata/v1/instan
 
 Notice how it returns an error stating that it requires the custom HTTP header to be present.  Add the custom header on the next run and retrieve the GCE instance name that is running this pod:
 
-```
-curl -s -H "Metadata-Flavor: Google" http://metadata.google.internal/computeMetadata/v1/instance/name
-```
+```console
+curl -s -H "Metadata-Flavor: Google" http://metadata.google.internal/computeMetadata/v1/instance/name && echo
 
-Output looks like:
-
-```
 gke-default-cluster-default-pool-b57a043a-6z5v
 ```
 
@@ -194,23 +185,23 @@ Without requiring a custom HTTP header when accessing the GCE Instance Metadata 
 
 Keep this shell inside the pod available for the next step.  If you accidentally exit from the pod, simply re-run:
 
-```
-kubectl run -it --rm gcloud --image=google/cloud-sdk:latest --restart=Never -- bash
+```console
+kubectl run -it --generator=run-pod/v1 --rm gcloud --image=google/cloud-sdk:latest --restart=Never -- bash
 ```
 
 ### Explore the GKE node bootstrapping credentials
 
-1. From inside the same pod shell, run the following command to list the attributes associated with the underlying GCE instances. Be sure to include the trailing slash:
+From inside the same pod shell, run the following command to list the attributes associated with the underlying GCE instances. Be sure to include the trailing slash:
 
-```
+```console
 curl -s http://metadata.google.internal/computeMetadata/v1beta1/instance/attributes/
 ```
 
-2. Perhaps the most sensitive data in this listing is `kube-env`.  It contains several variables which the `kubelet` uses as initial credentials when attaching the node to the GKE cluster.  The variables `CA_CERT`, `KUBELET_CERT`, and `KUBELET_KEY` contain this information and are therefore considered sensitive to non-cluster administrators.
+Perhaps the most sensitive data in this listing is `kube-env`.  It contains several variables which the `kubelet` uses as initial credentials when attaching the node to the GKE cluster.  The variables `CA_CERT`, `KUBELET_CERT`, and `KUBELET_KEY` contain this information and are therefore considered sensitive to non-cluster administrators.
 
 To see the potentially sensitive variables and data, run the following command:
 
-```
+```console
 curl -s http://metadata.google.internal/computeMetadata/v1beta1/instance/attributes/kube-env
 ```
 
@@ -226,14 +217,11 @@ There exists a high likelihood for compromise and exfiltration of sensitive `kub
 
 By default, GCP projects with the Compute API enabled have a default service account in the format of `NNNNNNNNNN-compute@developer.gserviceaccount.com` in the project and the `Editor` role attached to it.  Also by default, GKE clusters created without specifying a service account will utilize the default Compute service account and attach it to all worker nodes.
 
-1. Run the following `curl` command to list the OAuth scopes associated with the service account attached to the underlying GCE instance:
+Run the following `curl` command to list the OAuth scopes associated with the service account attached to the underlying GCE instance:
 
-```
+```console
 curl -s -H "Metadata-Flavor: Google" http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/scopes
-```
 
-(output)
-```
 https://www.googleapis.com/auth/devstorage.read_only
 https://www.googleapis.com/auth/logging.write
 https://www.googleapis.com/auth/monitoring
@@ -246,9 +234,9 @@ The combination of authentication scopes and the permissions of the service acco
 
 If the authentication scope were to be configured during cluster creation to include `https://www.googleapis.com/auth/cloud-platform`, this would allow any GCP API to be considered "in scope", and only the IAM permissions assigned to the service account would determine what can be accessed.  If the default service account is in use and the default IAM Role of `Editor` was not modified, this effectively means that any pod on this node pool has `Editor` permissions to the GCP project where the GKE cluster is deployed.  As the `Editor` IAM Role has a wide range of read/write permissions to interact with resources in the project such as Compute instances, GCS buckets, GCR registries, and more, this is most likely not desired.
 
-2. Exit out of this pod by typing:
+Exit out of this pod by typing:
 
-```
+```console
 exit
 ```
 
@@ -256,21 +244,17 @@ exit
 
 One of the simplest paths for "escaping" to the underlying host is by mounting the host's filesystem into the pod's filesystem using standard Kubernetes `volumes` and `volumeMounts` in a `Pod` specification.
 
-1. To demonstrate this, run the following to create a Pod that mounts the underlying host filesystem `/` at the folder named `/rootfs` inside the container:
+To demonstrate this, run the following to create a Pod that mounts the underlying host filesystem `/` at the folder named `/rootfs` inside the container:
 
-```
+```console
 kubectl apply -f manifests/hostpath.yml
 ```
 
-2. Run `kubectl get pod` and re-run until it's in the "Running" state:
+Run `kubectl get pod` and re-run until it's in the "Running" state:
 
-```
+```console
 kubectl get pod
-```
 
-(Output)
-
-```
 NAME       READY   STATUS    RESTARTS   AGE
 hostpath   1/1     Running   0          30s
 ```
@@ -279,14 +263,16 @@ hostpath   1/1     Running   0          30s
 
 Run the following to obtain a shell inside the pod you just created:
 
-```
+```console
 kubectl exec -it hostpath -- bash
 ```
 
 Switch to the pod shell's root filesystem point to that of the underlying host:
 
-```
+```console
 chroot /rootfs /bin/bash
+
+hostpath / #
 ```
 
 With those simple commands, the pod is now effectively a `root` shell on the node. You are now able to do the following:
@@ -295,25 +281,27 @@ With those simple commands, the pod is now effectively a `root` shell on the nod
 |--------------------------------------------------------------------------------|------------------------------------------------------|
 | list all local docker images                                                   | `docker images`                                      |
 | `docker run` privileged container of your choosing                             | `docker run --privileged <imagename>:<imageversion>` |
-| examine the Kubernetes secrets mounted on the node                             | `mount | grep volumes | awk '{print $3}' | xargs ls` |
+| examine the Kubernetes secrets mounted on the node                             | `mount \| grep volumes \| awk '{print $3}' \| xargs ls` |
 | `exec` into any running container (even into another pod in another namespace) | `docker exec -it <docker container ID> sh`           |
 
 Nearly every operation that the `root` user can perform is available to this pod shell.  This includes persistence mechanisms like adding SSH users/keys, running privileged docker containers on the host outside the view of Kubernetes, and much more.
 
 To exit the pod shell, run `exit` twice - once to leave the `chroot` and another to leave the pod's shell:
 
-```
+```console
 exit
 ```
 
-```
+```console
 exit
 ```
 
 Now you can delete the `hostpath` pod:
 
-```
+```console
 kubectl delete -f manifests/hostpath.yml
+
+pod "hostpath" deleted
 ```
 
 ### Understand the available controls
@@ -332,77 +320,61 @@ Note: In GKE versions 1.12 and newer, the `--metadata=disable-legacy-endpoints=t
 
 Create the second node pool:
 
-```
+```console
 ./second-pool.sh -c default-cluster
-```
 
-(Output)
-
-```
 NAME         MACHINE_TYPE   DISK_SIZE_GB  NODE_VERSION
 second-pool  n1-standard-1  100           1.12.8-gke.6
 ```
 
 ### Run a Google Cloud-SDK pod
 
-1. In Cloud Shell, launch a single instance of the Google Cloud-SDK container that will be run only on the second node pool with the protections enabled and not run as the root user.
+In Cloud Shell, launch a single instance of the Google Cloud-SDK container that will be run only on the second node pool with the protections enabled and not run as the root user.
 
-```
-kubectl run -it --rm gcloud --image=google/cloud-sdk:latest --restart=Never --overrides='{ "apiVersion": "v1", "spec": { "securityContext": { "runAsUser": 65534, "fsGroup": 65534 }, "nodeSelector": { "cloud.google.com/gke-nodepool": "second-pool" } } }' -- bash
+```console
+kubectl run -it --generator=run-pod/v1 --rm gcloud --image=google/cloud-sdk:latest --restart=Never --overrides='{ "apiVersion": "v1", "spec": { "securityContext": { "runAsUser": 65534, "fsGroup": 65534 }, "nodeSelector": { "cloud.google.com/gke-nodepool": "second-pool" } } }' -- bash
 ```
 
-2. You should now have a bash shell inside the pod's container running on the node pool named `second-pool`. You should see the following:
+You should now have a bash shell inside the pod's container running on the node pool named `second-pool`. You should see the following:
 
-```
+```console
 nobody@gcloud:/$
 ```
 It may take a few seconds for the container to be started and the command prompt to be displayed.
 
-If you don't see a command prompt, try pressing enter.
+If you don't see a command prompt, try pressing __Enter__.
 
 ### Explore various blocked endpoints
 
-1. With the configuration of the second node pool set to `--metadata=disable-legacy-endpoints=true`, the following command will now fail as expected:
+With the configuration of the second node pool set to `--metadata=disable-legacy-endpoints=true`, the following command will now fail as expected:
 
-```
+```console
 curl -s http://metadata.google.internal/computeMetadata/v1beta1/instance/name
-```
 
-(Output)
-
-```
 ...snip...
 Legacy metadata endpoints are disabled. Please use the /v1/ endpoint.
 ...snip...
 ```
 
-2. With the configuration of the second node pool set to `--workload-metadata-from-node=SECURE` , the following command to retrieve the sensitive file, `kube-env`, will now fail:
+With the configuration of the second node pool set to `--workload-metadata-from-node=SECURE` , the following command to retrieve the sensitive file, `kube-env`, will now fail:
 
-```
+```console
 curl -s -H "Metadata-Flavor: Google" http://metadata.google.internal/computeMetadata/v1/instance/attributes/kube-env
-```
 
-(Output)
-
-```
 This metadata endpoint is concealed.
 ```
 
-3. But other commands to non-sensitive endpoints will still succeed if the proper HTTP header is passed:
+But other commands to non-sensitive endpoints will still succeed if the proper HTTP header is passed:
 
-```
-curl -s -H "Metadata-Flavor: Google" http://metadata.google.internal/computeMetadata/v1/instance/name
-```
+```console
+curl -s -H "Metadata-Flavor: Google" http://metadata.google.internal/computeMetadata/v1/instance/name && echo
 
-(Example Output)
-
-```
 gke-default-cluster-second-pool-8fbd68c5-gzzp
 ```
 
 Exit out of the pod:
 
-```
+```console
 exit
 ```
 
@@ -410,51 +382,35 @@ You should now be back to your shell.
 
 ### Deploy PodSecurityPolicy objects
 
-1. In order to have the necessary permissions to proceed, grant explicit permissions to your own user account to become `cluster-admin:`
+In order to have the necessary permissions to proceed, grant explicit permissions to your own user account to become `cluster-admin:`
 
-```
+```console
 kubectl create clusterrolebinding clusteradmin --clusterrole=cluster-admin --user="$(gcloud config list account --format 'value(core.account)')"
-```
 
-(Output)
-
-```
 clusterrolebinding.rbac.authorization.k8s.io/clusteradmin created
 ```
 
-2. Next, deploy a more restrictive `PodSecurityPolicy` on all authenticated users in the default namespace:
+Next, deploy a more restrictive `PodSecurityPolicy` on all authenticated users in the default namespace:
 
-```
+```console
 kubectl apply -f manifests/restrictive-psp.yml
-```
 
-(Output)
-
-```
 podsecuritypolicy.extensions/restrictive-psp created
 ```
 
-3. Next, add the `ClusterRole` that provides the necessary ability to "use" this PodSecurityPolicy.
+Next, add the `ClusterRole` that provides the necessary ability to "use" this PodSecurityPolicy.
 
-```
+```console
 kubectl apply -f manifests/restrictive-psp-clusterrole.yml
-```
 
-(Output)
-
-```
 clusterrole.rbac.authorization.k8s.io/restrictive-psp created
 ```
 
-4. Finally, create a RoleBinding in the default namespace that allows any authenticated user permission to leverage the PodSecurityPolicy.
+Finally, create a RoleBinding in the default namespace that allows any authenticated user permission to leverage the PodSecurityPolicy.
 
-```
+```console
 kubectl apply -f manifests/restrictive-psp-clusterrolebinding.yml
-```
 
-(Output)
-
-```
 rolebinding.rbac.authorization.k8s.io/restrictive-psp created
 ```
 
@@ -464,7 +420,7 @@ __Note:__ In a real environment, consider replacing the `system:authenticated` u
 
 Next, enable the PodSecurityPolicy Admission Controller:
 
-```
+```console
 ./enable-psp.sh -c default-cluster
 ```
 
@@ -472,17 +428,11 @@ This will take a few minutes to complete.
 
 ### Deploy a blocked pod that mounts the host filesystem
 
-Because the account used to deploy the GKE cluster was granted cluster-admin permissions in a previous step, it's necessary to create another separate "user" account to interact with the cluster and validate the PodSecurityPolicy enforcement.
+Because the account used to deploy the GKE cluster was granted cluster-admin permissions in a previous step, it's necessary to create another separate "user" account to interact with the cluster and validate the PodSecurityPolicy enforcement.  To do this, run:
 
-1. To do this, run:
-
-```
+```console
 ./create-demo-developer.sh -c default-cluster
-```
 
-(Output)
-
-```TODO
 Created service account [demo-developer].
 ...snip...
 Fetching cluster endpoint and auth data.
@@ -491,39 +441,31 @@ kubeconfig entry generated for default-cluster.
 
 The `create-demo-developer.sh` script will create a new service account named `demo-developer`, grant that service account the `container.developer` IAM role, create a service account key, configure gcloud to use that service account key, and then configure kubectl to use those service account credentials when communicating with the cluster.
 
-2. Now, try to create another pod that mounts the underlying host filesystem `/` at the folder named `/rootfs` inside the container:
+Now, try to create another pod that mounts the underlying host filesystem `/` at the folder named `/rootfs` inside the container:
 
-```
+```console
 kubectl apply -f manifests/hostpath.yml
 ```
 
-3. This output validatates that it's blocked by PSP:
+This output validatates that it's blocked by PSP:
 
-```
+```console
 Error from server (Forbidden): error when creating "STDIN": pods "hostpath" is forbidden: unable to validate against any pod security policy: [spec.volumes[0]: Invalid value: "hostPath": hostPath volumes are not allowed to be used]
 ```
 
-4. Deploy another pod that meets the criteria of the `restrictive-psp`:
+Deploy another pod that meets the criteria of the `restrictive-psp`:
 
-```
+```console
 kubectl apply -f manifests/nohostpath.yml
-```
 
-(Output)
-
-```
 pod/nohostpath created
 ```
 
-9. To view the annotation that gets added to the pod indicating which PodSecurityPolicy authorized the creation, run:
+To view the annotation that gets added to the pod indicating which PodSecurityPolicy authorized the creation, run:
 
-```
-kubectl get pod nohostpath -o=jsonpath="{ .metadata.annotations.kubernetes\.io/psp }"
-```
+```console
+kubectl get pod nohostpath -o=jsonpath="{ .metadata.annotations.kubernetes\.io/psp }" && echo
 
-(Output appended to the Cloud Shell command line)
-
-```
 restrictive-psp
 ```
 
@@ -540,13 +482,8 @@ The following script will validate that the demo is deployed correctly:
 Replace the text `default-cluster` the name of the cluster that you would like to validate. If the script fails it will output:
 
 ```console
-TODO
-```
-
-If the script passes if will output:
-
-```console
-TODO
+Fetching cluster endpoint and auth data.
+kubeconfig entry generated for default-cluster.
 ```
 
 ## Tear Down
@@ -561,16 +498,22 @@ The following script will destroy the Kubernetes Engine cluster.
 
 ```console
 ./delete.sh -c default-cluster
+
+Fetching cluster endpoint and auth data.
+kubeconfig entry generated for default-cluster.
+Deleting cluster
+Deleting cluster default-cluster...
+...snip...
+deleted service account [demo-developer@my-project-id.iam.gserviceaccount.com]
 ```
 
-This output will change depending on the cluster name.  In this example the name "default-cluster" was used.
-
-Replace the text 'default-cluster' the name of the cluster that you would like to delete.
+Replace the text `default-cluster` the name of the cluster that you would like to delete.
 
 ## Troubleshooting
 
-1. Run `gcloud container clusters list` command to check the cluster status.
-1. If you get errors about quotas, please increase your quota in the project.  See [here][1] for more details.
+### Errors about project quotas
+
+If you get errors about quotas, please increase your quota in the project.  See [here][1] for more details.
 
 ## Relevant Materials
 
@@ -596,4 +539,5 @@ Replace the text 'default-cluster' the name of the cluster that you would like t
 [9]: https://cloud.google.com/terms/launch-stages
 [10]: https://cloud.google.com/kubernetes-engine/docs/how-to/protecting-cluster-metadata#concealment
 
-**This is not an officially supported Google product**
+Note, **this is not an officially supported Google product**.
+
